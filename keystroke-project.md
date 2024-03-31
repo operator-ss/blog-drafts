@@ -6,7 +6,7 @@
 ## **Table Of Contents**
 
 +	Objective.
-+   The Keystrok-project.
++ The Keystrok-project.
 +	Basic Static Analysis.
 +	Features.
 +	Anomalies of the malware.
@@ -65,7 +65,7 @@ Once we load the file in IDA-Freeware an analysis tool, we can see that the post
 
 ![image](https://github.com/operator-ss/blog-drafts/assets/161946103/82af1057-8965-4580-a4de-2bd0e63e8763)
 
-Then, once the routine initialization is done, the code uses `encoding_base64__ptr_Encoding_DecodeString` function to decode a base64 encoded content. 
+Then, once the routine initialization is done, the code uses the `encoding_base64__ptr_Encoding_DecodeString` function to decode a base64 encoded content. 
 
 
 ![image](https://github.com/operator-ss/blog-drafts/assets/161946103/9900fb0f-df0f-4728-a31b-f6a658137938)
@@ -149,7 +149,53 @@ func (bot *BotAPI) GetUpdatesChan(config UpdateConfig) UpdatesChannel {
 }
 ```
 
- Then it goes ahead and uses the `GetUpdatesChan` function to get the updates for the channel.  Now, lets move ahead to the keylogging part of the malware. 
+ Then it goes ahead and uses the `GetUpdatesChan` function to get the updates for the channel.  Now, let's move ahead to the keylogging part of the malware. 
+ 
+
+ ![image](https://github.com/operator-ss/blog-drafts/assets/161946103/f47cc87f-d9fe-4057-9f42-94f9525ee007)
+
+
+Now, here we see that the malware sample uses a Golang-based library known as `kindlyfire` for keylogging purposes. With a little research, it can be found that the `kindlyfire` is an open-source project, basically a keylogger prototype. 
+
+
+![image](https://github.com/operator-ss/blog-drafts/assets/161946103/ec9822e0-c236-45e3-8001-200ea7f76cc1)
+
+
+Here, we can see that there are three functions, out of them, two are specifically performing the key-logging-oriented tasks. Let us check them out one by one.
+
+
+
+![image](https://github.com/operator-ss/blog-drafts/assets/161946103/1cff219c-28af-4548-81e6-247505bf92eb)
+
+
+![image](https://github.com/operator-ss/blog-drafts/assets/161946103/ecbdeb16-5c2d-4c70-950e-acb7fb5f1e77)
+
+
+![image](https://github.com/operator-ss/blog-drafts/assets/161946103/fa1e5cde-f9cc-4a9c-856e-84bdef144cf3)
+
+
+
+The first function, we will have a look into is the `GetKey` function. This function uses [`GetAsyncKeyState`](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getasynckeystate) Windows API, overall, this function calls another function `ParseKeycode`. Overall this function is responsible for getting the current key entered by the user. Now, let us move ahead to the next function which is `ParseKeyCode`.
+
+
+![image](https://github.com/operator-ss/blog-drafts/assets/161946103/91434c09-5452-491d-a2bb-e3fb4b48a41a)
+
+
+![image](https://github.com/operator-ss/blog-drafts/assets/161946103/f41d6b5d-9d21-4f2c-a676-d1d435c3bf1e)
+
+
+This function parses the keys and returns the keys in a rune object, which is performed using `DecodeRuneInString`, which will later be exfiltrated. 
+
+Now, once we are done with the keylogging-based functions, let us move ahead to the other interesting functions. 
+
+
+
+
+
+
+
+
+ 
 
 
  
