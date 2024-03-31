@@ -3,7 +3,7 @@
 22 March, 2024.
 
 
-## **Table Of Contents**
+## Table Of Contents
 
 +	Objective.
 + The Keystrok-project.
@@ -18,22 +18,21 @@
 
 
 
-## **Objective**
+## Objective
 
 Recently, as per our stealer malware hunting process, we uncovered a strange Golang malware, along with us another fellow [researcher](https://twitter.com/suyog41/status/1769705553511473563) from the community, also came across this strange sample. The malicious binary focuses on the keylogging aspect, in terms of malicious activity, and then uses a legitimate web service and social media, known as Telegram for exfiltrating the data using a telegram bot. 
 
 
-## **The Keystrok-project.** 
-
-After, we did receive the sample on our telemetry which is powered by our detection rules completely based on YARA signatures.
-
-![Name-Of-Project](Project-Name.png)
-
-We found out that the sample had been programmed in Golang and the name of the project along with the alias of the developer. 
+## The Keystrok-project.
 
 
+![image](https://github.com/operator-ss/blog-drafts/assets/161946103/18d1bd28-9440-4b0e-9f5c-1dda89d427c9)
 
-## **Basic Static Analysis.**
+
+After, we did receive the sample on our telemetry which is powered by our detection rules completely based on YARA signatures. We found out that the sample had been programmed in Golang and the name of the project along with the alias of the developer. 
+
+
+## Basic Static Analysis.
 
 
 
@@ -51,7 +50,7 @@ Then, moving ahead, we figured out that the file is programmed using Golang, one
 
 
 
-## **Features.**
+## Features.
 
 
 Let us analyze this malicious sample to determine its workings and capabilities. 
@@ -175,7 +174,7 @@ Here, we can see that there are three functions, out of them, two are specifical
 
 
 
-The first function, we will have a look into is the `GetKey` function. This function uses [`GetAsyncKeyState`](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getasynckeystate) Windows API, overall, this function calls another function `ParseKeycode`. Overall this function is responsible for getting the current key entered by the user. Now, let us move ahead to the next function which is `ParseKeyCode`.
+The first function, we will have a look into is the `GetKey` function. This function uses [`GetAsyncKeyState`](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getasynckeystate) Windows API, overall, this function calls another function `ParseKeycode`. Overall this function is responsible for getting the current key entered by the user. Now, let us move ahead to the next function, ' ParseKeyCode`.
 
 
 ![image](https://github.com/operator-ss/blog-drafts/assets/161946103/91434c09-5452-491d-a2bb-e3fb4b48a41a)
@@ -186,9 +185,84 @@ The first function, we will have a look into is the `GetKey` function. This func
 
 This function parses the keys and returns the keys in a rune object, which is performed using `DecodeRuneInString`, which will later be exfiltrated. 
 
-Now, once we are done with the keylogging-based functions, let us move ahead to the other interesting functions. 
+Once we finish the keylogging-based functions, let us move ahead to the other interesting functions. 
 
 
+![image](https://github.com/operator-ss/blog-drafts/assets/161946103/bc7b1d6a-e9b4-431d-bd55-43d8e7a4dcbe)
+
+
+![image](https://github.com/operator-ss/blog-drafts/assets/161946103/dd467f60-0cc2-4ab2-8588-feba6171fe75)
+
+
+
+Now, we have the last function, known as `sendDocument`. This uses Telegram bot API to send the exfiltrated data that is the keystrokes to the Telegram C2. With this, we are done with the analysis of the features of the keystroke project.  Summing up the features of the project are as follows. 
+
+- Keylogging.
+- Telegram C2.
+  
+
+![image](https://github.com/operator-ss/blog-drafts/assets/161946103/8d8c6d66-4edd-4a67-8e96-38905369f471)
+
+
+
+Upon, some little research, we were able to find out the telegram bot which is being used for exfiltration. 
+
+
+
+
+## Anomalies of the malware.
+
+As per our research & analysis, we believe this malware is a part of the stealer project which is currently in build release, and the author is yet to add more features in the upcoming days. One of the most important anomalies of this malware we believe is the OPSEC failure which is caused by the presence of the PDB path letting researchers know the name of the project and the author. Another notable anomaly is the usage of open-source projects which aids analysts in aiding with the detection part. 
+
+
+
+## Detection
+
+We are releasing a public YARA Rule, for the researchers, for tracking this keylogger-oriented project present in the wild.  
+
+
+```yara
+rule keystroke {
+    meta:
+        author = "SignalZero Threat Research Team"
+        description = "YARA rule for detecting malicious keystrok keylogger"
+        hash = "9b3df85d5a1abcefa60990439f1478e1b3c6891397fb9ac720e948f31e1864fd"
+        date = "2024-03-31"
+
+    strings:
+        $asynckeystate = { 48 8B 4C 24 20 48 89 08 48 8B 15 D9 83 29 00 48 89 C3 BF 01 00 00 00 48 89 D0 48 89 F9 E8 D6 A1 E4 FF 66 A9 00 80 }
+        $string1 = "C:/Users/salam/Desktop/keystrok/gokb22222"
+        $string2 = "/github.com/kindlyfire/go-keylogger"
+        $string3 = "telegram-bot-api"
+        $opcode = {48 89 D0 48 89 F9 E8 34 9F E4 FF 48 8B 44 24 30 BB 01 00 00 00 48 89 D9 E8 02 A4 E4 FF 66 90 E8 1B 3B E2 FF 89 C3 48 8B 4C 24 60 }
+
+    condition:
+        ($opcode and $asynckeystate) or ($string1 or $string2 or $string3)
+}
+```
+
+
+## Tactics, Techniques and Procedure.
+
+T1071.001: Command and Control.
+T1056.001: Input Capture: Keylogging.
+T1567.002: Exfiltration Over Web Service: Exfiltration to Cloud Storage.
+
+
+
+## Indicators of Compromise.
+
+
+SHA-256 : 9b3df85d5a1abcefa60990439f1478e1b3c6891397fb9ac720e948f31e1864fd
+
+
+
+## How InfinitY Can Help.
+
+At SignalZero, our dedicated team meticulously monitors the activities of sophisticated threat actors, diligently tracking their movements and dissecting their adversarial infrastructure. Through our highly advanced product, InfinitY, we offer unparalleled defence against malicious implants and the ever-evolving landscape of cyber threats.InfinitY stands at the apex of our defence capabilities, boasting a suite of innovative features meticulously crafted to fortify your organization's security posture. The cutting-edge threat detection algorithms employed by InfinitY are powered by active threat intelligence in the Indian cyber landscape. InfinitY is engineered to provide proactive defence against even the most sophisticated attacks.
+
+
+When a threat is detected, InfinitY springs into action, swiftly detecting the breach and notifying the stakeholders. Compromised systems can be instantly quarantined to prevent further spread and mitigate potential damage. Our proactive approach ensures a rapid and effective response, safeguarding critical assets and maintaining operational continuity. Furthermore, we are committed to continuously enhancing InfinitY's detection capabilities to stay one step ahead of evolving threats. Through ongoing updates, refinements, and the integration of the latest threat intelligence, InfinitY remains at the forefront of threat detection, identifying and neutralizing adversaries with precision and efficiency. At SignalZero, your security is our utmost priority. With InfinitY as your trusted ally, you can navigate the ever-changing threat landscape with confidence. Rest assured that you're equipped with the most advanced tools and technologies to defend against emerging threats and protect your organization's interests effectively.
 
 
 
